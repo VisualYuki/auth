@@ -1,0 +1,29 @@
+{
+  "name": "back",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node --transpileOnly ./src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/supertest": "^6.0.3",
+    "dotenv": "^17.2.3",
+    "supertest": "^7.1.4",
+    "ts-node": "^10.9.2",
+    "vitest": "^4.0.9"
+  }
+}
