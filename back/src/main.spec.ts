@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { initDatabase } from "../database";
+import { initDatabase } from "./database/database";
 import request from "supertest";
-import { app } from "../express";
-import "./index";
+import { app } from "./express";
+import "./auth/index";
 
 describe("/auth", () => {
   beforeEach(() => {
     initDatabase();
   });
 
-  it("get accessToken and refreshToken", async () => {
+  it("200 response with accessToken payload and refreshToken cookie", async () => {
     const res = await request(app)
       .post("/auth")
       .send({
@@ -27,7 +27,7 @@ describe("/auth", () => {
     expect(refreshTokenCookie).toContain("HttpOnly");
   });
 
-  it("invalid login and password", async () => {
+  it("401 error if login or password is incorrect", async () => {
     const res = await request(app)
       .post("/auth")
       .send({
@@ -38,6 +38,18 @@ describe("/auth", () => {
 
     expect(res.body.data).not.toHaveProperty("accessToken");
     expect(res.headers["set-cookie"]).toBeUndefined();
+  });
+
+  it("400 error if password is empty", async () => {
+    const res = await request(app)
+      .post("/auth")
+      .send({
+        login: "demo",
+        password: "",
+      })
+      .expect(400);
+
+    expect(res.body.error).toBe("login and password are required");
   });
 });
 

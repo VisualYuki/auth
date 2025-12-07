@@ -1,16 +1,8 @@
 import { Request } from "express";
-import { dbService } from "../database";
 import { app } from "../express";
-import {
-  ACCESS_TOKEN_SECRET,
-  generateAccessToken,
-  generateRefreshToken,
-  Payload,
-  REFRESH_TOKEN_SECRET,
-  // refreshTokens,
-  //removeRefreshToken,
-} from "./jwt";
-import jwt from "jsonwebtoken";
+import { tokenService } from "../service/token";
+import { userCredentialsService } from "../service/user";
+import { Payload } from "../utils/token";
 
 function createResponse(param: {
   data?: Record<string, unknown>;
@@ -25,22 +17,30 @@ function createResponse(param: {
 app.post(
   "/auth",
   async (req: Request<{}, any, { login: string; password: string }>, res) => {
-    const login = req.body.login;
-    const password = req.body.password;
+    const { login, password } = req.body;
 
-    const authData = dbService.getUserCredentials(login, password);
+    if (!login || !password) {
+      return res.status(400).json(
+        createResponse({
+          error: "login and password are required",
+        })
+      );
+    }
 
-    let isExist = authData !== undefined;
-
-    const payload: Payload = {
+    const isValidUser = await userCredentialsService.isValidUser(
       login,
-    };
+      password
+    );
 
-    const accessToken = generateAccessToken(payload);
-    const refreshToken = await generateRefreshToken(payload);
+    if (isValidUser) {
+      const payload: Payload = {
+        login,
+      };
 
-    if (isExist) {
-      res.cookie("refreshToken", refreshToken, {
+      const accessToken = tokenService.generateAccessToken(payload);
+      const refreshToken = tokenService.generateRefreshToken(payload);
+
+      res.cookie("refreshToken", refreshToken.token, {
         httpOnly: true,
         //maxAge: 1000,
       });
