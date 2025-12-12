@@ -1,6 +1,5 @@
 import { db } from "./database";
 
-// TODO: для логина может быть несколько refresh токенов
 function addRefreshToken(
   userLogin: string,
   refreshToken: string,

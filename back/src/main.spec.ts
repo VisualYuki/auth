@@ -3,10 +3,39 @@ import { initDatabase } from "./database/database";
 import request from "supertest";
 import { app } from "./express";
 import "./auth/index";
+import { type DatabaseSync } from "node:sqlite";
+import { hashUtils } from "./utils/hash";
+
+let db: DatabaseSync;
 
 describe("/auth", () => {
-  beforeEach(() => {
-    initDatabase();
+  beforeEach(async () => {
+    db = await initDatabase(true);
+
+    db.exec(`
+      CREATE TABLE users (
+        login TEXT NOT NULL PRIMARY KEY,
+        password TEXT NOT NULL
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE refreshSessions (
+        "userLogin"	TEXT NOT NULL UNIQUE,
+        "refreshToken" TEXT NOT NULL,
+        "expiresAt"	INTEGER
+      )
+    `);
+
+    db.prepare(`INSERT INTO users (login, password) VALUES (?,?)`).run(
+      "demo",
+      await hashUtils.hash("demo")
+    );
+
+    db.prepare(`INSERT INTO users (login, password) VALUES (?,?)`).run(
+      "login",
+      await hashUtils.hash("login")
+    );
   });
 
   it("200 response with accessToken payload and refreshToken cookie", async () => {
@@ -50,6 +79,22 @@ describe("/auth", () => {
       .expect(400);
 
     expect(res.body.error).toBe("login and password are required");
+  });
+
+  it("refresh token is stored in database", async () => {
+    const res = await request(app)
+      .post("/auth")
+      .send({
+        login: "login",
+        password: "login",
+      })
+      .expect(200);
+
+    const bdRow = db
+      .prepare(`SELECT * FROM refreshSessions WHERE userLogin = ?`)
+      .all("login");
+
+    expect(bdRow.length).toBe(1);
   });
 });
 

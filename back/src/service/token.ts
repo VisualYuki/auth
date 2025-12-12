@@ -8,11 +8,7 @@ export function generateAccessToken(payload: Payload) {
 export function generateRefreshToken(payload: Payload) {
   const token = tokenUtils.generateRefreshToken(payload);
 
-  // tokenDatabase.addRefreshToken(
-  //   payload.login,
-  //   token.token,
-  //   Date.now() + REFRESH_TOKEN_EXPIRES_IN * 1000
-  // );
+  tokenDatabase.addRefreshToken(payload.login, token.token, token.expiresAt);
 
   return token;
 }
