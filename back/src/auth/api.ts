@@ -1,85 +1,128 @@
 import { Request } from "express";
-import { app } from "../express";
+import { app } from "../api/express";
 import { tokenService } from "../service/token";
 import { userCredentialsService } from "../service/user";
-import { Payload } from "../utils/token";
+import { Payload, tokenUtils } from "../utils/token";
+import { tokenDatabase } from "../database/token";
 
 function createResponse(param: {
   data?: Record<string, unknown>;
-  error?: string | null;
+  error?: string;
 }) {
-  return {
-    data: param.data ? param.data : {},
-    error: param.error ? param.error : "",
-  };
+  const response: { data?: Record<string, unknown>; error?: string } = {};
+
+  if (param.data) {
+    response.data = param.data;
+  }
+
+  if (param.error) {
+    response.error = param.error;
+  }
+
+  return response;
 }
 
 app.post(
   "/auth",
   async (req: Request<{}, any, { login: string; password: string }>, res) => {
-    const { login, password } = req.body;
+    debugger;
+    try {
+      const { login, password } = req.body;
 
-    if (!login || !password) {
-      return res.status(400).json(
-        createResponse({
-          error: "login and password are required",
-        })
-      );
-    }
+      if (!login || !password) {
+        return res.status(400).json(
+          createResponse({
+            error: "login and password are required",
+          })
+        );
+      }
 
-    const isValidUser = await userCredentialsService.isValidUser(
-      login,
-      password
-    );
-
-    if (isValidUser) {
-      const payload: Payload = {
+      const isValidUser = await userCredentialsService.isValidUser(
         login,
-      };
-
-      const accessToken = tokenService.generateAccessToken(payload);
-      const refreshToken = tokenService.generateRefreshToken(payload);
-
-      res.cookie("refreshToken", refreshToken.token, {
-        httpOnly: true,
-        //maxAge: 1000,
-      });
-
-      res.json(
-        createResponse({
-          data: {
-            accessToken: accessToken,
-          },
-        })
+        password
       );
-    } else {
-      res.status(401).json(
-        createResponse({
-          error: "invalid auth data",
-        })
-      );
+
+      if (isValidUser) {
+        const payload: Payload = {
+          login,
+        };
+
+        const accessToken = tokenService.generateAccessToken(payload);
+        const refreshToken = tokenService.generateRefreshToken(payload);
+
+        res.cookie("refreshToken", refreshToken.token, {
+          httpOnly: true,
+          //maxAge: 1000,
+        });
+
+        res.json(
+          createResponse({
+            data: {
+              accessToken: accessToken,
+            },
+          })
+        );
+      } else {
+        res.status(401).json(
+          createResponse({
+            error: "invalid auth data",
+          })
+        );
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        res.status(500).json(createResponse({ error: err.message }));
+      } else if (typeof err === "string") {
+        res.status(500).json(createResponse({ error: err }));
+      }
+
+      return res
+        .status(500)
+        .json(createResponse({ error: "Internal server error" }));
     }
   }
 );
 
-// app.post("/auth/refresh", async (req: Request<{}, any, any>, res) => {
-//   const refreshToken = req.cookies.refreshToken;
+app.post("/auth/refresh", async (req: Request<{}, any, any>, res) => {
+  const refreshToken = req.cookies.refreshToken;
 
-//   if (!refreshToken)
-//     return res.status(401).json({ message: "refresh token is required" });
-//   if (!(await getRefreshToken(refreshToken)))
-//     return res.status(403).json({ message: "refresh token is invalid" });
+  if (!refreshToken)
+    return res
+      .status(401)
+      .json(createResponse({ error: "refresh token is required" }));
 
-//   jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, decoded) => {
-//     if (err)
-//       return res.status(403).json({ message: "refresh token is invalid" });
+  // if (!tokenService.isRefreshTokenExist(refreshToken)) {
+  //   return res
+  //     .status(401)
+  //     .json(createResponse({ error: "refresh token is not exist" }));
+  // }
 
-//     const payload: Payload = { login: (decoded as Payload).login };
-//     const newToken = generateAccessToken(payload);
+  const refreshSession = tokenDatabase.getRefreshSession(refreshToken);
 
-//     res.json({ token: newToken });
-//   });
-// });
+  if (!refreshSession) {
+    return res
+      .status(401)
+      .json(createResponse({ error: "refresh token is not exist" }));
+  }
+
+  if (await tokenService.isRefreshTokenExpired(refreshToken)) {
+    return res
+      .status(401)
+      .json(createResponse({ error: "refresh token is expired" }));
+  }
+
+  const accessToken = tokenService.generateAccessToken({
+    login: refreshSession.userLogin,
+  });
+
+  res.json(
+    createResponse({
+      data: {
+        accessToken: accessToken,
+      },
+    })
+  );
+});
 
 // app.post(
 //   "/protected",

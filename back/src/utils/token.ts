@@ -7,6 +7,11 @@ export const REFRESH_TOKEN_EXPIRES_IN = 60;
 
 export type Payload = { login: string };
 
+type ReturnToken = {
+  token: string;
+  expiresAt: number;
+}; //| null
+
 export function generateToken(
   payload: Payload,
   secret: string,
@@ -17,14 +22,20 @@ export function generateToken(
   });
 }
 
-export function generateAccessToken(payload: Payload) {
+export function generateAccessToken(payload: Payload): ReturnToken {
+  const token = generateToken(
+    payload,
+    ACCESS_TOKEN_SECRET,
+    ACCESS_TOKEN_EXPIRES_IN
+  );
+
   return {
-    token: generateToken(payload, ACCESS_TOKEN_SECRET, ACCESS_TOKEN_EXPIRES_IN),
+    token: token,
     expiresAt: Date.now() + ACCESS_TOKEN_EXPIRES_IN * 1000,
   };
 }
 
-export function generateRefreshToken(payload: Payload) {
+export function generateRefreshToken(payload: Payload): ReturnToken {
   const token = generateToken(
     payload,
     REFRESH_TOKEN_SECRET,
@@ -37,8 +48,33 @@ export function generateRefreshToken(payload: Payload) {
   };
 }
 
+export async function isTokenExpired(token: string): Promise<boolean> {
+  const result = await new Promise<boolean>((resolve) => {
+    jwt.verify(token, REFRESH_TOKEN_SECRET, (err, decoded) => {
+      if (err) {
+        resolve(true);
+      } else {
+        if (decoded === undefined) {
+          resolve(false);
+        } else if (typeof decoded === "string") {
+          resolve(false);
+        } else {
+          if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        }
+      }
+    });
+  });
+
+  return result;
+}
+
 export const tokenUtils = {
   generateToken,
   generateAccessToken,
   generateRefreshToken,
+  isTokenExpired,
 };
