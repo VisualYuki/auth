@@ -1,4 +1,4 @@
-import { Request } from "express";
+import { NextFunction, Request, Response } from "express";
 import { app } from "../api/express";
 import { tokenService } from "../service/token";
 import { userCredentialsService } from "../service/user";
@@ -24,8 +24,11 @@ function createResponse(param: {
 
 app.post(
   "/auth",
-  async (req: Request<{}, any, { login: string; password: string }>, res) => {
-    debugger;
+  async (
+    req: Request<{}, any, { login: string; password: string }>,
+    res,
+    next
+  ) => {
     try {
       const { login, password } = req.body;
 
@@ -55,7 +58,7 @@ app.post(
           //maxAge: 1000,
         });
 
-        res.json(
+        return res.json(
           createResponse({
             data: {
               accessToken: accessToken,
@@ -63,65 +66,67 @@ app.post(
           })
         );
       } else {
-        res.status(401).json(
+        return res.status(401).json(
           createResponse({
             error: "invalid auth data",
           })
         );
       }
     } catch (err) {
-      if (err instanceof Error) {
-        res.status(500).json(createResponse({ error: err.message }));
-      } else if (typeof err === "string") {
-        res.status(500).json(createResponse({ error: err }));
-      }
-
-      return res
-        .status(500)
-        .json(createResponse({ error: "Internal server error" }));
+      next(err);
     }
   }
 );
 
-app.post("/auth/refresh", async (req: Request<{}, any, any>, res) => {
-  const refreshToken = req.cookies.refreshToken;
+app.post("/auth/refresh", async (req: Request<{}, any, any>, res, next) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
 
-  if (!refreshToken)
-    return res
-      .status(401)
-      .json(createResponse({ error: "refresh token is required" }));
+    if (!refreshToken)
+      return res
+        .status(401)
+        .json(createResponse({ error: "refresh token is required" }));
 
-  // if (!tokenService.isRefreshTokenExist(refreshToken)) {
-  //   return res
-  //     .status(401)
-  //     .json(createResponse({ error: "refresh token is not exist" }));
-  // }
+    const refreshSession = tokenDatabase.getRefreshSession(refreshToken);
 
-  const refreshSession = tokenDatabase.getRefreshSession(refreshToken);
+    if (!refreshSession) {
+      return res
+        .status(401)
+        .json(createResponse({ error: "refresh token is not exist" }));
+    }
 
-  if (!refreshSession) {
-    return res
-      .status(401)
-      .json(createResponse({ error: "refresh token is not exist" }));
+    if (tokenService.isRefreshTokenExpired(refreshToken)) {
+      return res
+        .status(401)
+        .json(createResponse({ error: "refresh token is expired" }));
+    }
+
+    const accessToken = tokenService.generateAccessToken({
+      login: refreshSession.userLogin,
+    });
+
+    return res.json(
+      createResponse({
+        data: {
+          accessToken: accessToken,
+        },
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof Error) {
+    return res.status(500).json(createResponse({ error: err.message }));
+  } else if (typeof err === "string") {
+    return res.status(500).json(createResponse({ error: err }));
   }
 
-  if (await tokenService.isRefreshTokenExpired(refreshToken)) {
-    return res
-      .status(401)
-      .json(createResponse({ error: "refresh token is expired" }));
-  }
-
-  const accessToken = tokenService.generateAccessToken({
-    login: refreshSession.userLogin,
-  });
-
-  res.json(
-    createResponse({
-      data: {
-        accessToken: accessToken,
-      },
-    })
-  );
+  return res
+    .status(500)
+    .json(createResponse({ error: "Internal server error" }));
 });
 
 // app.post(

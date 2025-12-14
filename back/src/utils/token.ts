@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 
 export const ACCESS_TOKEN_SECRET = "access-secret-example";
 export const REFRESH_TOKEN_SECRET = "refresh-secret-example";
@@ -48,28 +48,18 @@ export function generateRefreshToken(payload: Payload): ReturnToken {
   };
 }
 
-export async function isTokenExpired(token: string): Promise<boolean> {
-  const result = await new Promise<boolean>((resolve) => {
-    jwt.verify(token, REFRESH_TOKEN_SECRET, (err, decoded) => {
-      if (err) {
-        resolve(true);
-      } else {
-        if (decoded === undefined) {
-          resolve(false);
-        } else if (typeof decoded === "string") {
-          resolve(false);
-        } else {
-          if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        }
-      }
-    });
-  });
+export function isTokenExpired(token: string): boolean {
+  try {
+    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as JwtPayload;
 
-  return result;
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (err: unknown) {
+    return true;
+  }
 }
 
 export const tokenUtils = {

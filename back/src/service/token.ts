@@ -23,16 +23,12 @@ function isRefreshTokenExist(token: string) {
   return true;
 }
 
-async function isRefreshTokenExpired(token: string) {
+function isRefreshTokenExpired(token: string) {
   const refreshSession = tokenDatabase.getRefreshSession(token);
 
   if (!refreshSession) return true;
 
-  if (
-    await tokenUtils.isTokenExpired(token, {
-      login: refreshSession.userLogin,
-    })
-  ) {
+  if (tokenUtils.isTokenExpired(token)) {
     return true;
   } else {
     return false;
