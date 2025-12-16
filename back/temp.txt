@@ -1,0 +1,99 @@
+// // Middleware для проверки access token
+// function authenticateToken(req: Request, res: Response, next: NextFunction) {
+//   const authHeader = req.headers["authorization"];
+//   const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+//   if (!token) {
+//     return res
+//       .status(401)
+//       .json(createResponse({ error: "access token is required" }));
+//   }
+
+//   const decoded = tokenUtils.verifyAccessToken(token);
+
+//   if (!decoded) {
+//     return res
+//       .status(403)
+//       .json(createResponse({ error: "invalid or expired access token" }));
+//   }
+
+//   // @ts-ignore - добавляем user в request
+//   req.user = decoded;
+//   next();
+// }
+
+// // Protected endpoint
+// app.post("/protected", authenticateToken, (req: Request, res: Response) => {
+//   // @ts-ignore
+//   const user = req.user as Payload;
+
+//   res.json(
+//     createResponse({
+//       data: {
+//         message: "message from protected",
+//         user: {
+//           login: user.login,
+//         },
+//       },
+//     })
+//   );
+// });
+
+// // Logout endpoint
+// app.post(
+//   "/auth/logout",
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const refreshToken = req.cookies.refreshToken;
+
+//       if (refreshToken) {
+//         tokenDatabase.removeRefreshTokenByToken(refreshToken);
+//       }
+
+//       res.clearCookie("refreshToken");
+//       res.status(204).send();
+//     } catch (err) {
+//       next(err);
+//     }
+//   }
+// );
+
+// app.post(
+//   "/protected",
+//   (req, res, next) => {
+//     const token = req.headers["authorization"];
+
+//     if (!token) {
+//       res.status(401);
+//       return;
+//     }
+
+//     jwt.verify(token, ACCESS_TOKEN_SECRET, (err, decoded) => {
+//       if (err) {
+//         res.status(403);
+//         return;
+//       }
+
+//       //@ts-ignore
+//       req.user = decoded;
+//       next();
+//     });
+//   },
+//   (req, res) => {
+//     //@ts-ignore
+//     res.json({ message: "message from protected", user: req.user });
+//   }
+// );
+
+// app.post("/auth/logout", (req, res) => {
+//   debugger;
+
+//   res.header("Access-Control-Allow-Credentials", "true");
+//   res.header("Access-Control-Allow-Origin", "http://localhost:1866"); // конкретный домен, не *
+
+//   const refreshToken = req.cookies.refreshToken;
+
+//   removeRefreshToken(refreshToken);
+
+//   req.status(204);
+// });

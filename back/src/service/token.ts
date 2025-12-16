@@ -1,5 +1,5 @@
 import { tokenDatabase } from "../database/token";
-import { Payload, REFRESH_TOKEN_EXPIRES_IN, tokenUtils } from "../utils/token";
+import { Payload, tokenUtils } from "../utils/token";
 
 function generateAccessToken(payload: Payload) {
   return tokenUtils.generateAccessToken(payload);

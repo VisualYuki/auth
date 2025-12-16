@@ -28,8 +28,15 @@ function getRefreshSession(token: string) {
     .get(token) as RefreshSession | undefined;
 }
 
+function removeRefreshTokenByToken(refreshToken: string) {
+  db.prepare("delete from refreshSessions where refreshToken = ?").run(
+    refreshToken
+  );
+}
+
 export const tokenDatabase = {
   addRefreshToken,
   removeRefreshToken,
   getRefreshSession,
+  removeRefreshTokenByToken,
 };

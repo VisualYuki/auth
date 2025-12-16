@@ -41,7 +41,7 @@ describe("/auth", () => {
     );
   });
 
-  it("200 response with accessToken payload and refreshToken cookie", async () => {
+  it("return 200 response with accessToken payload and refreshToken cookie", async () => {
     const res = await request(app)
       .post("/auth")
       .send({
@@ -59,7 +59,7 @@ describe("/auth", () => {
     expect(refreshTokenCookie).toContain("HttpOnly");
   });
 
-  it("should return 500 if throws error", async () => {
+  it("return 500 if throws error", async () => {
     const mockIsValidUser = vi
       .spyOn(userCredentialsService, "isValidUser")
       .mockRejectedValue(new Error("Database connection faild"));
@@ -77,7 +77,7 @@ describe("/auth", () => {
     mockIsValidUser.mockRestore();
   });
 
-  it("401 error if login or password is incorrect", async () => {
+  it("return 401 error if login or password is incorrect", async () => {
     const res = await request(app)
       .post("/auth")
       .send({
@@ -90,7 +90,7 @@ describe("/auth", () => {
     expect(res.headers["set-cookie"]).toBeUndefined();
   });
 
-  it("400 error if password is empty", async () => {
+  it("return 400 error if password is empty", async () => {
     const res = await request(app)
       .post("/auth")
       .send({
@@ -118,13 +118,13 @@ describe("/auth", () => {
     expect(bdRow.length).toBe(1);
   });
 
-  it("should return error if refresh token isn't set", async () => {
+  it("return error if refresh token isn't set", async () => {
     const res2 = await request(app).post("/auth/refresh").expect(401);
 
     expect(res2.body.error).toBe("refresh token is required");
   });
 
-  it("should return error if refresh token is invalid", async () => {
+  it("return error if refresh token is invalid", async () => {
     const res2 = await request(app)
       .post("/auth/refresh")
       .set("Cookie", [`refreshToken=foo`])
@@ -133,7 +133,7 @@ describe("/auth", () => {
     expect(res2.body.error).toBe("refresh token is not exist");
   });
 
-  it("should return error if refresh token is expired", async () => {
+  it("return error if refresh token is expired", async () => {
     const res1 = await request(app)
       .post("/auth")
       .send({
@@ -158,7 +158,7 @@ describe("/auth", () => {
     expect(res2.body.error).toBe("refresh token is expired");
   });
 
-  it("should refresh refreshToken after auth", async () => {
+  it("refresh refreshToken after auth", async () => {
     const res1 = await request(app)
       .post("/auth")
       .send({

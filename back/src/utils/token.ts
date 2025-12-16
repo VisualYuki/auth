@@ -62,9 +62,19 @@ export function isTokenExpired(token: string): boolean {
   }
 }
 
+export function verifyAccessToken(token: string): Payload | null {
+  try {
+    const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET) as JwtPayload;
+    return decoded as Payload;
+  } catch (err: unknown) {
+    return null;
+  }
+}
+
 export const tokenUtils = {
   generateToken,
   generateAccessToken,
   generateRefreshToken,
   isTokenExpired,
+  verifyAccessToken,
 };
